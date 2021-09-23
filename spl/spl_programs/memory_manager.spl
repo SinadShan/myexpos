@@ -1,0 +1,54 @@
+
+// module 2
+alias functionNum R1;
+
+// Get free page
+if( functionNum == 1 ) then
+
+    // wait_mem_count
+    [SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] + 1;
+
+    // busy wait while mem free count is zero
+    while( [SYSTEM_STATUS_TABLE + 2] == 0 ) do
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 4] = WAIT_MEM;
+        multipush(R1,R2);
+        call SCHEDULER;
+        multipop(R1,R2);
+    endwhile ;
+
+    [SYSTEM_STATUS_TABLE + 3] = [SYSTEM_STATUS_TABLE + 3] - 1;
+    [SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] - 1;
+
+    alias i R3;
+    i = 76;
+    while( i< MAX_MEM_PAGE) do
+        if([MEMORY_FREE_LIST + i] == 0) then
+            [MEMORY_FREE_LIST + i] = 1;
+            break;
+        endif;
+        i = i + 1;
+    endwhile;
+
+    R0 = i;
+    return;
+endif ;
+
+// Release Page
+if( functionNum == 2 ) then
+    alias pageno R2;
+    [MEMORY_FREE_LIST + pageno] = [MEMORY_FREE_LIST + pageno] - 1;
+
+    if([MEMORY_FREE_LIST + pageno] == 0) then
+        [SYSTEM_STATUS_TABLE + 2] = [SYSTEM_STATUS_TABLE + 2] + 1;
+        alias i R3;
+        i = 0;
+        while(i<16) do
+            if([PROCESS_TABLE +i*16 + 4] == WAIT_MEM) then
+                [PROCESS_TABLE +i*16 + 4] = READY;
+            endif;
+            i = i + 1;
+        endwhile;
+    endif;
+
+    return;
+endif;

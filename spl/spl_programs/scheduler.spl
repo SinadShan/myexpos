@@ -1,0 +1,68 @@
+
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+// push BP onto kernel stack 
+SP = SP + 1;
+[SP] = BP;
+
+alias process_table_entry R1;
+process_table_entry = PROCESS_TABLE + (16*currentPID);
+
+[process_table_entry + 12] = SP % 512;
+[process_table_entry + 14] = PTBR;
+[process_table_entry + 15] = PTLR;
+
+alias newPID R2;
+
+alias i R3;
+i = currentPID + 1 ;
+while( i<16 ) do
+    // print i;
+    if ( [PROCESS_TABLE + (4+(16*i))] == CREATED || [PROCESS_TABLE + (4+(16*i))] == READY) then
+        newPID = i;
+        // print "created/ready";
+        // breakpoint;
+        break;
+    endif;
+    i = i+1;
+endwhile ;
+
+if( i==16 ) then
+    // print "i is currpid";
+    // breakpoint;
+    newPID = 0;    
+endif ;
+
+alias new_process_table R4;
+new_process_table = PROCESS_TABLE + (16*newPID);
+SP = [new_process_table + 11]*512 + [new_process_table + 12];
+PTBR = [new_process_table + 14];
+PTLR = [new_process_table + 15];
+[SYSTEM_STATUS_TABLE + 1] = newPID;
+
+// print "new pid set to";
+// print newPID;
+// breakpoint;
+
+if( [PROCESS_TABLE + (4+16*newPID)] == CREATED ) then
+    SP = [PROCESS_TABLE + 16*newPID + 13];
+    [PROCESS_TABLE + 16*newPID + 4] = RUNNING;
+    [PROCESS_TABLE + 16*newPID + 9] = 0;
+    // print "going to process";
+    // print newPID;
+    // breakpoint;
+    ireturn;
+endif ;
+
+
+[new_process_table + 4] = RUNNING;
+
+// restore BP of process from kernel stack
+BP = [SP];
+SP = SP - 1;
+
+// print "return normally";
+// breakpoint;
+return;
+

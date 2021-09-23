@@ -1,0 +1,33 @@
+// print "Switching...";
+// breakpoint;
+// user stack in process table (UPTR)
+[PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;
+
+
+// Setting SP to Kernel Stack (UArea Page number * 512 - 1)
+SP = [PROCESS_TABLE + ([SYSTEM_STATUS_TABLE + 1] * 16) + 11] * 512 - 1;
+
+backup;
+
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+// set up process table
+alias process_table_entry R1;
+process_table_entry = PROCESS_TABLE + currentPID * 16;
+
+[process_table_entry + 4] = READY;
+
+// print "timer-> sched";
+// breakpoint;
+call SCHEDULER;
+
+restore;
+
+// restore SP to user stack 
+SP = [PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13];      
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+
+// breakpoint;
+ireturn;
+
