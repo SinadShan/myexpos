@@ -69,18 +69,12 @@ else
     [PTBR+3] = "0100";
 
     multipush(R0,R1,R2,R3,R4);
-    R1 = 1;
-    R2 = [SYSTEM_STATUS_TABLE + 1];
-    call MEMORY_MANAGER;
 
-    [ PTBR + 4 ] = R0;
-    [ PTBR + 5 ] = "0110";
+    [ PTBR + 4 ] = -1;
+    [ PTBR + 5 ] = "0000";
 
-    R1 = 1;
-    R2 = [SYSTEM_STATUS_TABLE + 1];
-    call MEMORY_MANAGER;
-    [ PTBR + 6 ] = R0;
-    [ PTBR + 7 ] = "0110";
+    [ PTBR + 6 ] = -1;
+    [ PTBR + 7 ] = "0000";
 
     R1 = 1;
     R2 = [SYSTEM_STATUS_TABLE + 1];
@@ -103,34 +97,71 @@ else
         file_size = file_size + 1;
     endif;
 
-    alias j R7;
-    j = 0;
-    while( j < file_size ) do
-        multipush(R0,R1,R2,R3,R4,R6,R7);
+    multipush(R0,R1,R2,R3,R4,R6);
 
-        R1 = 1;
+    R1 = 5;
+    R2 = [INODE_TABLE + i*16 + 8];
 
-        call MEMORY_MANAGER;
+    // Get Code Page
+    call MEMORY_MANAGER;
+    multipop(R1,R2,R3,R4,R6);
 
-        multipop(R1,R2,R3,R4,R6,R7);
+    [PTBR + 8 ] = R0;
+    [PTBR + 9 ] = "0100";
 
-        multipush(R0,R1,R2,R3,R4,R6,R7);
-        R1 = 2;
-        R2 = [SYSTEM_STATUS_TABLE + 1];
-        R4 = [INODE_TABLE + i*16 + 8+j]; // block number
-        R3 = R0;                         // page number   
+    multipop(R0);
+
+    [PTBR + 10] = -1;
+    [PTBR + 11] = "0000";
+
+    [PTBR + 12] = -1;
+    [PTBR + 13] = "0000";
+
+    [PTBR + 14] = -1;
+    [PTBR + 15] = "0000";
+
+    alias disk_map_table R7;
+    disk_map_table =  DISK_MAP_TABLE + currentPID*10 ;
+
+    [ disk_map_table ] = -1;
+    [ disk_map_table + 1] = -1;
+    [ disk_map_table + 2] = -1;
+    [ disk_map_table + 3] = -1;
+    [ disk_map_table + 4] = [INODE_TABLE + i*16 + 8];
+    [ disk_map_table + 5] = [INODE_TABLE + i*16 + 9];
+    [ disk_map_table + 6] = [INODE_TABLE + i*16 + 10];
+    [ disk_map_table + 7] = [INODE_TABLE + i*16 + 11];
+    [ disk_map_table + 8] = -1;
+    [ disk_map_table + 9] = -1;
+
+    // alias j R7;
+    // j = 0;
+    // while( j < file_size ) do
+    //     multipush(R0,R1,R2,R3,R4,R6,R7);
+
+    //     R1 = 1;
+
+    //     call MEMORY_MANAGER;
+
+    //     multipop(R1,R2,R3,R4,R6,R7);
+
+    //     multipush(R0,R1,R2,R3,R4,R6,R7);
+    //     R1 = 2;
+    //     R2 = [SYSTEM_STATUS_TABLE + 1];
+    //     R4 = [INODE_TABLE + i*16 + 8+j]; // block number
+    //     R3 = R0;                         // page number   
         
-        call DEVICE_MANAGER;
-        multipop(R0,R1,R2,R3,R4,R6,R7);
-        // loadi(R0,[INODE_TABLE + i*16 + 8+j]);
+    //     call DEVICE_MANAGER;
+    //     multipop(R0,R1,R2,R3,R4,R6,R7);
+    //     // loadi(R0,[INODE_TABLE + i*16 + 8+j]);
     
-        [PTBR + 8 + j*2] = R0;
-        [PTBR + 8 + j*2 + 1] = "0100";
+    //     [PTBR + 8 + j*2] = R0;
+    //     [PTBR + 8 + j*2 + 1] = "0100";
         
-        multipop(R0);
-        j = j+1;
+    //     multipop(R0);
+    //     j = j+1;
 
-    endwhile ;
+    // endwhile ;
 
     PTLR = 10;
 

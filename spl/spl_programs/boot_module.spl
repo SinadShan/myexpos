@@ -2,6 +2,9 @@
 loadi(63,13);
 loadi(64,14);
 
+// disk free list from disk to memory
+loadi(61,2);
+
 // inode table from disk to memory
 loadi(59,3);
 loadi(60,4);
@@ -186,6 +189,16 @@ PTBR = PAGE_TABLE_BASE+20;
 [PROCESS_TABLE +16+ 14] = PAGE_TABLE_BASE+20;   // PTBR in process table
 [PROCESS_TABLE +16+ 15] = 10;   // PTLR in process table
 [PROCESS_TABLE +16+ 1] = 1;     // store pid
+
+// setting up disk map table for init process
+[ DISK_MAP_TABLE + 10 + 2] = -1;
+[ DISK_MAP_TABLE + 10 + 3] = -1;
+[ DISK_MAP_TABLE + 10 + 4] = 65;
+[ DISK_MAP_TABLE + 10 + 5] = 66;
+[ DISK_MAP_TABLE + 10 + 6] = -1;
+[ DISK_MAP_TABLE + 10 + 7] = -1;
+[ DISK_MAP_TABLE + 10 + 8] = -1;
+[ DISK_MAP_TABLE + 10 + 9] = -1;
 
 alias i R3;
 i = 0;

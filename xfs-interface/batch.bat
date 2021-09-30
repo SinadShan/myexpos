@@ -1,7 +1,7 @@
 load --os ../spl/spl_programs/os_startup.xsm
 load --init ../expl/user_progs/user_exec.xsm
 load --idle ../expl/user_progs/idle.xsm
-load --exhandler ../spl/spl_programs/exception.xsm
+load --exhandler ../spl/spl_programs/exception_handler.xsm
 load --library ../expl/library.lib
 load --int=timer ../spl/spl_programs/timer.xsm
 load --int=disk ../spl/spl_programs/disk_interrupt.xsm

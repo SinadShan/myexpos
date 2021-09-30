@@ -1,0 +1,92 @@
+// print("exception but no");
+breakpoint;
+// set mode flag for exception
+[ PROCESS_TABLE + 16*[SYSTEM_STATUS_TABLE + 1] + 9] = -1;
+
+// switch to kernel stack
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 11] * 512 - 1;
+
+backup;
+
+alias currentPID R0;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+
+alias userSP R1;
+userSP = SP;
+
+multipush(EIP);
+
+if( EC !=0 || userSP == PTLR*512 - 1) then
+    print("~Exception~");
+
+    multipush(R0,R1);
+
+    R1 = 3;
+    R2 = [SYSTEM_STATUS_TABLE + 1];
+
+    // exit process
+    call PROCESS_MANAGER;
+
+    multipop(R0,R1);
+
+    call SCHEDULER;
+endif ;
+
+if( EC == 0 ) then
+    // if page fault due to code page
+    if( EPN>=4 && EPN<=7 ) then
+        alias code_block R2;
+        // fetching code block number to be loaded
+        code_block = [ DISK_MAP_TABLE + currentPID*10 + EPN];
+
+        multipush(R0,R1,R2);
+        R1 = 5;
+        R2 = code_block; // redundant
+
+        // get code page
+        call MEMORY_MANAGER;
+        multipop(R1,R2);
+
+        [ PTBR + EPN*2 ] = R0;
+        [ PTBR + EPN*2 + 1 ] = "1100";
+
+        multipop(R0);
+    endif ;
+
+    // if page fault due to heap pages
+    if( EPN==2 || EPN==3) then
+        multipush(R0,R1);
+        R1= 1;
+        // get free page
+        call MEMORY_MANAGER;
+        multipop(R1);
+        [ PTBR + 4 ] = R0;
+        [ PTBR + 5 ] = "1110";
+        multipop(R0);
+
+        multipush(R0,R1);
+        R1= 1;
+        // get free page
+        call MEMORY_MANAGER;
+        multipop(R1);
+        [ PTBR + 6 ] = R0;
+        [ PTBR + 7 ] = "1110";
+        multipop(R0);
+        print("shoot");
+    endif;
+
+endif;
+
+[ PROCESS_TABLE + 16*currentPID + 9] = 0;
+multipop(EIP);
+
+restore;
+
+SP = [PROCESS_TABLE + 16*[SYSTEM_STATUS_TABLE + 1] + 13];
+SP = SP + 1;
+[ [PTBR + 2*(SP/512)]*512 + SP%512 ] = EIP;
+
+ireturn;
+
+
