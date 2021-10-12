@@ -18,7 +18,6 @@ alias newPID R2;
 alias i R3;
 i = currentPID + 1 ;
 while( i<16 ) do
-    // print i;
     if ( [PROCESS_TABLE + (4+(16*i))] == CREATED || [PROCESS_TABLE + (4+(16*i))] == READY) then
         newPID = i;
         // print "created/ready";
@@ -41,14 +40,13 @@ PTBR = [new_process_table + 14];
 PTLR = [new_process_table + 15];
 [SYSTEM_STATUS_TABLE + 1] = newPID;
 
-// print "new pid set to";
-// print newPID;
-// breakpoint;
-
 if( [PROCESS_TABLE + (4+16*newPID)] == CREATED ) then
     SP = [PROCESS_TABLE + 16*newPID + 13];
     [PROCESS_TABLE + 16*newPID + 4] = RUNNING;
     [PROCESS_TABLE + 16*newPID + 9] = 0;
+
+    // storing value in first word of kernel stack in BP (stage 20)
+    BP = [[ PROCESS_TABLE + newPID*16 + 11]*512];
     // print "going to process";
     // print newPID;
     // breakpoint;

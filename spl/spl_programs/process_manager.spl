@@ -5,6 +5,26 @@ alias currentPID R2;
 alias userAreaPage R3;
 
 
+// get pcb entry
+if(functionNum == 1) then
+    alias i R4;
+    i = 0;
+    // loop through process tables to find a free one
+    while(i<16) do
+        if([PROCESS_TABLE + i*16 + 4] == TERMINATED) then
+            [PROCESS_TABLE + i*16 + 4] = ALLOCATED;
+            [PROCESS_TABLE + 16*i + 1] = i;
+            [PROCESS_TABLE + 16*i + 14] = PAGE_TABLE_BASE + 20*i;
+            [PROCESS_TABLE + 16*i + 15] = 10;
+            R0 = i;
+            return;
+        endif;
+        i = i+1;
+    endwhile;
+    R0 = -1;
+    return;
+endif;
+
 // free User Area Page
 if(functionNum == 2) then
     userAreaPage = [PROCESS_TABLE + R2*16 + 11];
@@ -39,8 +59,6 @@ endif ;
 
 // Free page table
 if( functionNum == 4) then
-
-    // free disk map table
     
     // heap 1
     if([DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +2] != -1) then
@@ -98,6 +116,7 @@ if( functionNum == 4) then
         multipop(R0,R1,R2);
     endif;
 
+    // free disk map table
     alias k R4;
     k = 2;
     while( k<10 ) do
