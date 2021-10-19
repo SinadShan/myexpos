@@ -1,5 +1,5 @@
 load --os ../spl/spl_programs/os_startup.xsm
-load --init ../expl/user_progs/forkList.xsm
+load --init ../expl/user_progs/shell.xsm
 load --idle ../expl/user_progs/idle.xsm
 load --exhandler ../spl/spl_programs/exception_handler.xsm
 load --library ../expl/library.lib
@@ -11,6 +11,8 @@ load --int=7 ../spl/spl_programs/sample_int7.xsm
 load --int=8 ../spl/spl_programs/fork.xsm
 load --int=9 ../spl/spl_programs/exec.xsm
 load --int=10 ../spl/spl_programs/exit.xsm
+load --int=11 ../spl/spl_programs/int11.xsm
+load --int=15 ../spl/spl_programs/shutdown.xsm
 load --module 0 ../spl/spl_programs/resource_manager.xsm
 load --module 1 ../spl/spl_programs/process_manager.xsm
 load --module 2 ../spl/spl_programs/memory_manager.xsm
