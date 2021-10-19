@@ -1,0 +1,70 @@
+// extract sys call number from user stack
+alias userSP R1;
+alias sysCallNumber R2;
+
+userSP = SP;
+sysCallNumber =[[PTBR + 2*(userSP - 5)/512]*512 + (userSP - 5)%512];
+
+// switch to kernel stack
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 +13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]*512 -1;
+
+// WAIT
+if( sysCallNumber == 13 ) then
+    // print("WAIT");
+    // breakpoint;
+    // change mode flag
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 13;
+
+    alias waitPID R3;
+    waitPID = [[PTBR + 2*(userSP - 4)/512]*512 + (userSP - 4)%512];
+
+    if ( waitPID == [SYSTEM_STATUS_TABLE + 1] || waitPID >= 16 || [ PROCESS_TABLE + waitPID*16 + 4] == TERMINATED) then
+        [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = -1;
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+
+        SP = userSP;
+        ireturn;
+    endif;
+
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 4] = WAIT_PROCESS;
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 5] = waitPID;
+
+    multipush(R1,R2,R3);
+    call SCHEDULER;
+    multipop(R1,R2,R3);
+
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = 0;
+
+endif ;
+
+//SIGNAL
+if( sysCallNumber == 14 ) then
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 14;
+    alias i R3;
+    i = 1;
+    while (i<16) do
+        if ([PROCESS_TABLE + i*16 + 4] == WAIT_PROCESS && [PROCESS_TABLE + i*16 + 5] == [SYSTEM_STATUS_TABLE + 1] ) then
+            [PROCESS_TABLE + i*16 + 4] = READY;
+        endif;
+        i = i+ 1;
+    endwhile;
+    [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 0;
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = 0;
+    
+endif ;
+
+// GET PID
+if (sysCallNumber == 11) then
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = [SYSTEM_STATUS_TABLE + 1];
+endif;
+
+// GET PPID
+if (sysCallNumber == 12) then
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+ 1]*16 + 12];
+endif;
+
+// switch to user stack
+SP = userSP;
+ireturn;

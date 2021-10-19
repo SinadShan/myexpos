@@ -1,0 +1,14 @@
+int main()
+{
+    decl
+        str input;
+    enddecl
+
+    begin
+        input = "";
+        if (input != "b") then
+            print("yes");
+        endif;
+        return 0;
+    end
+}
