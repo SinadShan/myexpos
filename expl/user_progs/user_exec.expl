@@ -2,7 +2,8 @@
 int main()
 {
     decl
-        int name,temp;
+        int temp;
+        str name;
     enddecl
 
     begin
