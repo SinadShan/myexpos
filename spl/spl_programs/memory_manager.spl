@@ -29,6 +29,10 @@ if( functionNum == 1 ) then
         i = i + 1;
     endwhile;
 
+    if ( (128 - [SYSTEM_STATUS_TABLE + 2]) < [72*512 + 0] || [72*512 + 0] == 0) then
+        [72*512 + 0] = 128 - [SYSTEM_STATUS_TABLE + 2];
+    endif;
+
     R0 = i;
     return;
 endif ;
@@ -98,6 +102,6 @@ endif ;
 
 // release block
 if( functionNum == 4 ) then
-    [DISK_FREE_LIST + R3] = 0;
+    [DISK_FREE_LIST + R2] = [DISK_FREE_LIST + R2] - 1;
     return;
 endif ;

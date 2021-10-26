@@ -1,3 +1,6 @@
+// number of switches to kernel module
+[72*512 + 3] = [72*512 + 3] + 1;
+
 alias currentPID R0;
 currentPID = [SYSTEM_STATUS_TABLE + 1];
 [ PROCESS_TABLE + 16*currentPID + 9] = 7;

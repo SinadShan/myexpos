@@ -1,3 +1,6 @@
+// number of switches to kernel module
+[72*512 + 3] = [72*512 + 3] + 1;
+
 // extract sys call number from user stack
 alias userSP R1;
 alias sysCallNumber R2;

@@ -1,0 +1,79 @@
+// number of switches to kernel module
+[72*512 + 3] = [72*512 + 3] + 1;
+
+// extract sys call number from user stack
+alias userSP R1;
+alias sysCallNumber R2;
+alias semID R3;
+
+userSP = SP;
+sysCallNumber =[[PTBR + 2*(userSP - 5)/512]*512 + (userSP - 5)%512];
+semID =[[PTBR + 2*(userSP - 4)/512]*512 + (userSP - 4)%512];
+
+// switch to kernel stack
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 +13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]*512 -1;
+
+// SEMLOCK
+if (sysCallNumber == 19) then
+    // set mode flag
+    [ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 19;
+
+    // check if semID is valid
+
+    while ([SEMAPHORE_TABLE + [([ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]+1)*512 - 16 + semID*2 + 1]*4] != -1) do
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 4] = WAIT_SEMAPHORE;
+        [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 5] = [([ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]+1)*512 - 16 + semID*2 + 1];
+
+        multipush(R1,R2,R3);
+        call SCHEDULER;
+        multipop(R1,R2,R3);
+
+    endwhile;
+    [ SEMAPHORE_TABLE + [([ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]+1)*512 - 16 + semID*2 + 1]*4 ] = [SYSTEM_STATUS_TABLE + 1];
+
+    // store return value
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = 0;
+
+endif;
+
+// SEM UNLOCK
+if (sysCallNumber == 20) then
+    // set mode flag
+    [ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 20;
+
+    // check if semID is valid
+
+    if ( [SEMAPHORE_TABLE + [([ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]+1)*512 - 16 + semID*2 + 1]*4] != -1 ) then
+        if ( [SEMAPHORE_TABLE + [([ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]+1)*512 - 16 + semID*2 + 1]*4] != [SYSTEM_STATUS_TABLE + 1] ) then
+            [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = -2;
+            [ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+            SP = userSP;
+            ireturn;
+        endif;
+
+        [SEMAPHORE_TABLE + [([ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]+1)*512 - 16 + semID*2 + 1]*4] = -1;
+
+        alias i R4;
+        i = 1;
+
+        while (i<16) do 
+            if ( [PROCESS_TABLE + i*16 + 4] == WAIT_SEMAPHORE && [PROCESS_TABLE + i*16 + 5] == [([ PROCESS_TABLE + i*16 +11]+1)*512 - 16 + semID*2 + 1]) then
+                [PROCESS_TABLE + i*16 + 4] = READY;
+                [PROCESS_TABLE + i*16 + 5] = 0;
+            endif;
+            i = i+1 ;
+        endwhile;
+    endif;
+
+    // store return value 
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = 0;
+
+endif;
+
+// reset mode flag
+[ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+
+// switch to user stack
+SP = userSP;
+ireturn;

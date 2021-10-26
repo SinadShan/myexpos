@@ -73,7 +73,7 @@ if( EC == 0 ) then
         [ PTBR + 6 ] = R0;
         [ PTBR + 7 ] = "1110";
         multipop(R0);
-        print("shoot");
+        // print("shoot");
     endif;
 
 endif;

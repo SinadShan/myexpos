@@ -57,3 +57,47 @@ if( functionNum == 9 ) then
         return;
     endif ;
 endif;
+
+// Acquire semaphore
+if ( functionNum == 6 ) then
+    alias i R3;
+    i = 0;
+    while ( i < 32 ) do 
+        if ( [SEMAPHORE_TABLE + i*4 + 1] == 0 ) then
+            [SEMAPHORE_TABLE + i*4 + 1] = 1;
+            [SEMAPHORE_TABLE + i*4 + 0] = -1;
+            break;
+        endif;
+        i = i+1;
+    endwhile;
+
+    if ( i==32 ) then
+        R0 = -1;
+        return;
+    endif;
+
+    R0 = i;
+    return;
+endif;
+
+// Release semaphore
+if ( functionNum == 7 ) then
+    alias semIndex R2; 
+    alias PID R3;
+
+    if ( [SEMAPHORE_TABLE + semIndex*4 ] == 1) then
+        [SEMAPHORE_TABLE + semIndex*4 ] = -1;
+
+        alias i R4;
+        i = 0;
+        while (i<16) do
+            if ( [PROCESS_TABLE + i*16 + 4] == WAIT_SEMAPHORE  && [PROCESS_TABLE + i*16 + 5] == semIndex) then
+                [PROCESS_TABLE + i*16 + 4] = READY;
+                [PROCESS_TABLE + i*16 + 5] = 0;
+            endif;
+            i = i + 1;
+        endwhile;
+    endif;
+    [SEMAPHORE_TABLE + semIndex*4 + 1] = [SEMAPHORE_TABLE + semIndex*4 + 1] - 1;
+    return;
+endif;

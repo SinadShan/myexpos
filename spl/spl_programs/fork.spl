@@ -1,3 +1,6 @@
+// number of switches to kernel module
+[72*512 + 3] = [72*512 + 3] + 1;
+
 alias process_table_entry R4;
 process_table_entry = PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16;
 
@@ -120,8 +123,14 @@ l = i + 16;
 j = [process_table_entry+11]*512 + 496;
 while (i < l) do
     [i] = [j];
-    i = i + 1;
-    j = j + 1;
+    [i + 1] = [j + 1];
+    i = i + 2;
+    j = j + 2;
+
+    if ( [j] == 1 ) then
+        [ SEMAPHORE_TABLE + [j + 1]*4 + 1] = [ SEMAPHORE_TABLE + [j + 1]*4 + 1] + 1;
+    endif;
+    
 endwhile;
 
 // copy disk map table
@@ -134,25 +143,33 @@ while (i < l) do
     j = j + 1;
 endwhile;
 
-// copy stack page 1
-i = [newptb+16]*512;
-l = i + 512;
-j = [PTBR+16]*512;
-while (i < l) do
-    [i] = [j];
-    i = i + 1;
-    j = j + 1;
+// copy stack pages 
+i = 0;
+while (i<512) do
+    [[newptb + 16]*512 + i] = [[PTBR +16]*512 + i];
+    [[newptb + 18]*512 + i] = [[PTBR +18]*512 + i];
+    i = i+ 1;
 endwhile;
 
-// copy stack page 2
-i = [newptb+18]*512;
-l = i + 512;
-j = [PTBR+18]*512;
-while (i < l) do
-    [i] = [j];
-    i = i + 1;
-    j = j + 1;
-endwhile;
+// // copy stack page 1
+// i = [newptb+16]*512;
+// l = i + 512;
+// j = [PTBR+16]*512;
+// while (i < l) do
+//     [i] = [j];
+//     i = i + 1;
+//     j = j + 1;
+// endwhile;
+
+// // copy stack page 2
+// i = [newptb+18]*512;
+// l = i + 512;
+// j = [PTBR+18]*512;
+// while (i < l) do
+//     [i] = [j];
+//     i = i + 1;
+//     j = j + 1;
+// endwhile;
 
 // push BP
 [[process_table_new + 11]*512] = BP;

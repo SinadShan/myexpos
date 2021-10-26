@@ -28,6 +28,26 @@ endif;
 // free User Area Page
 if(functionNum == 2) then
     userAreaPage = [PROCESS_TABLE + R2*16 + 11];
+
+    alias i R4;
+    i = 0;
+
+    while ( i < 16 ) do
+    
+        if ( [([PROCESS_TABLE + currentPID*16 + 11]+1)*512 -16 + i] == 1) then
+            
+            // release semaphore 
+            multipush(R1,R2,R3,R4);
+            R1 = 7;
+            R2 = [([PROCESS_TABLE + currentPID*16 + 11]+1)*512 -16 + i + 1];
+            R3 = [SYSTEM_STATUS_TABLE + 1]; 
+            call RESOURCE_MANAGER;
+            multipop(R1,R2,R3,R4);
+
+        endif;
+
+        i = i + 2;
+    endwhile;
     multipush(R1,R2,R3);
 
     R1 = 2;
@@ -52,7 +72,6 @@ if( functionNum == 3 ) then
     call PROCESS_MANAGER;
 
     multipop(R1,R2);
-    [PROCESS_TABLE + currentPID*16 + 4] = TERMINATED;
 
     if ([PROCESS_TABLE + [SYSTEM_STATUS_TABLE  + 1]*16 + 9] != 9) then
         alias i R4;
@@ -70,6 +89,7 @@ if( functionNum == 3 ) then
         endwhile;
     endif;
 
+    [PROCESS_TABLE + currentPID*16 + 4] = TERMINATED;
     return;
 endif ;
 
@@ -81,13 +101,13 @@ if( functionNum == 4) then
         multipush(R0,R1,R2,R3,R4);
 
         R1 = 4;
-        R2 = [SYSTEM_STATUS_TABLE + 1];
-        R3 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +2];
+        R2 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +2];
+        R3 = [SYSTEM_STATUS_TABLE + 1];
 
         //call release block
         call MEMORY_MANAGER;
-
         multipop(R0,R1,R2,R3,R4);
+        [ DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +2] = -1;
     endif;
 
     // heap 2
@@ -95,13 +115,13 @@ if( functionNum == 4) then
         multipush(R0,R1,R2);
 
         R1 = 4;
-        R2 = [SYSTEM_STATUS_TABLE + 1];
-        R3 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +3];
+        R2 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +3];
+        R3 = [SYSTEM_STATUS_TABLE + 1];
 
         //call release block
         call MEMORY_MANAGER;
-
         multipop(R0,R1,R2);
+        [ DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +3] = -1;
     endif;
 
     // stack 1
@@ -109,13 +129,13 @@ if( functionNum == 4) then
         multipush(R0,R1,R2);
 
         R1 = 4;
-        R2 = [SYSTEM_STATUS_TABLE + 1];
-        R3 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +8];
+        R2 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +8];
+        R3 = [SYSTEM_STATUS_TABLE + 1];
 
         //call release block
         call MEMORY_MANAGER;
-
         multipop(R0,R1,R2);
+        [ DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +8] = -1;
     endif;
 
     // stack 2
@@ -123,13 +143,13 @@ if( functionNum == 4) then
         multipush(R0,R1,R2);
 
         R1 = 4;
-        R2 = [SYSTEM_STATUS_TABLE + 1];
-        R3 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +9];
+        R2 = [DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +9];
+        R3 = [SYSTEM_STATUS_TABLE + 1];
 
         //call release block
         call MEMORY_MANAGER;
-
         multipop(R0,R1,R2);
+        [ DISK_MAP_TABLE + [SYSTEM_STATUS_TABLE + 1]*10 +9] = -1;
     endif;
 
     // free disk map table
@@ -151,15 +171,15 @@ if( functionNum == 4) then
     while( i<20 ) do
         if([PTBR + i] != -1) then
 
-            [PTBR + i] = -1;
-            [PTBR + i + 1] = "0000";
             multipush(R1,R2,R3);
-
             // Release Page
             R1 = 2;
             R2 = [PTBR + i];
             call MEMORY_MANAGER;
             multipop(R1,R2,R3);
+            
+            [PTBR + i] = -1;
+            [PTBR + i + 1] = "0000";
 
         endif;
         i = i+2;
