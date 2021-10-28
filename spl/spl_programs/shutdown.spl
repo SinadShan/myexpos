@@ -16,4 +16,49 @@ print diskAcc;
 print contextSwitch;
 print kernelSwitch;
 
+// extract sys call number from user stack
+alias userSP R1;
+
+userSP = SP;
+
+// switch to kernel stack
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 +13] = SP;
+SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]*512 -1;
+
+[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 21;
+
+if ([PROCESS_TABLE+ [SYSTEM_STATUS_TABLE + 1]*16 + 1] != 1 || [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 3] != 1) then
+    // store return value 0 
+    [[PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512] = -1;
+    [ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+    SP = userSP;
+    ireturn;
+endif;
+
+multipush(R1);
+R1 = 1;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = INODE_TABLE/512;
+R4 = 3;
+call DEVICE_MANAGER;
+
+R1 = 1;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = USER_TABLE/512;
+R4 = 4;
+call DEVICE_MANAGER;
+
+R1 = 1;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = ROOT_FILE/512;
+R4 = 5;
+call DEVICE_MANAGER;
+
+R1 = 1;
+R2 = [SYSTEM_STATUS_TABLE + 1];
+R3 = DISK_FREE_LIST/512;
+R4 = 2;
+call DEVICE_MANAGER;
+multipop(R1);
+
 halt;

@@ -6,6 +6,7 @@ load --library ../expl/library.lib
 load --int=timer ../spl/spl_programs/timer.xsm
 load --int=disk ../spl/spl_programs/disk_interrupt.xsm
 load --int=console ../spl/spl_programs/console_interrupt.xsm
+load --int=4 ../spl/spl_programs/int4.xsm
 load --int=6 ../spl/spl_programs/int6.xsm
 load --int=7 ../spl/spl_programs/sample_int7.xsm
 load --int=8 ../spl/spl_programs/fork.xsm

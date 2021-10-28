@@ -23,6 +23,58 @@ if( functionNum == 3 ) then
  
 endif;
 
+// Acquire Inode
+if (functionNum == 4) then
+    alias inodeIndex R2;
+    alias currentPID R3;
+
+    while ( [ FILE_STATUS_TABLE + inodeIndex*4 + 0 ] != -1 ) do
+        [ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 4] = WAIT_FILE;
+        [ PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 5] = inodeIndex;
+
+        multipush(R1,R2,R3);
+        call SCHEDULER;
+        multipop(R1,R2,R3);
+
+    endwhile;
+
+    if ([INODE_TABLE + inodeIndex*16 + 1] == -1) then
+        R0 = -1;
+        return;
+    endif;
+
+    [FILE_STATUS_TABLE + inodeIndex*4 + 0] = currentPID;
+
+    R0 = 0;
+    return;
+endif;
+
+// Release Inode
+if (functionNum == 5) then
+    alias inodeIndex R2;
+    alias currentPID R3;
+
+    if ([FILE_STATUS_TABLE + inodeIndex*4 + 0] != currentPID) then
+        R0 = -1;
+        return;
+    endif;
+
+    [FILE_STATUS_TABLE + inodeIndex*4 + 0] = -1;
+
+    alias i R4;
+    i = 0;
+
+    while (i<16) do
+        if ( [PROCESS_TABLE + i*16 + 4] == WAIT_FILE) then
+            [PROCESS_TABLE + i*16 + 4] = READY;
+            [PROCESS_TABLE + i*16 + 5] = -1;
+        endif;
+        i = i+1;
+    endwhile;
+
+    return;
+endif;
+
 // Acquire terminal
 if( functionNum == 8 ) then
     while( [TERMINAL_STATUS_TABLE + 0] == 1) do

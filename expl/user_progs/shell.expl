@@ -9,6 +9,7 @@ int main()
         temp = 1;
         
         while (temp == 1) do
+            breakpoint;
             temp = exposcall("Write", -2, "Command:");
             temp = exposcall("Read", -1, input);
 
