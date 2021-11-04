@@ -31,7 +31,7 @@ if ( sysCallNumber == 1) then
 
     while ( i < MAX_FILE_NUM ) do
         if ( [ INODE_TABLE + i*16 + 1] == fileName) then
-            // store return value 0
+            // store return value 0, file already exists
             [retVal] = 0;
             [ modeFlag ] = 0;
             SP = userSP;
@@ -114,7 +114,7 @@ if ( sysCallNumber == 4) then
         ireturn;
     endif;
 
-    if ( [ INODE_TABLE + i*16 + 4] == 0 ) then
+    if ( [ INODE_TABLE + i*16 + 4] == 1 ) then
         if ( [PROCESS_TABLE + currentPID*16 + 3] != 0 && [INODE_TABLE + i*16 + 3] != currentPID) then
             // store return value -1 
             print("Permission Denied");

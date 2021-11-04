@@ -1,20 +1,20 @@
 // number of switches to kernel module
-[72*512 + 3] = [72*512 + 3] + 1;
+// [72*512 + 3] = [72*512 + 3] + 1;
 
-alias maxMem R0;
-alias diskAcc R1;
-alias contextSwitch R2;
-alias kernelSwitch R3;
+// alias maxMem R0;
+// alias diskAcc R1;
+// alias contextSwitch R2;
+// alias kernelSwitch R3;
 
-maxMem = [72*512 + 0];
-diskAcc = [72*512 + 1];
-contextSwitch = [72*512 + 2];
-kernelSwitch = [72*512 + 3];
+// maxMem = [72*512 + 0];
+// diskAcc = [72*512 + 1];
+// contextSwitch = [72*512 + 2];
+// kernelSwitch = [72*512 + 3];
 
-print maxMem;
-print diskAcc;
-print contextSwitch;
-print kernelSwitch;
+// print maxMem;
+// print diskAcc;
+// print contextSwitch;
+// print kernelSwitch;
 
 // extract sys call number from user stack
 alias userSP R1;

@@ -19,17 +19,15 @@ if (functionNum == 2) then
     [DISK_STATUS_TABLE  + 2] = pageNo;
     [DISK_STATUS_TABLE  + 3] = blockNo;
     [DISK_STATUS_TABLE  + 4] = [SYSTEM_STATUS_TABLE + 1];
-
+    breakpoint;
     load(pageNo,blockNo);
 
     [PROCESS_TABLE + [SYSTEM_STATUS_TABLE+1]*16 + 4] = WAIT_DISK;
     
-    multipush(R1,R2,R3);
+    multipush(R1,R2,R3,R4);
     call SCHEDULER;
-    multipop(R1,R2,R3);
+    multipop(R1,R2,R3,R4);
 
-    // print "device manager";
-    // breakpoint;
     return;
 
 endif;
@@ -55,7 +53,6 @@ if( functionNum == 1 ) then
     store(pageNo,blockNo);
 
     [PROCESS_TABLE + currentPID*16 + 4] = WAIT_DISK;
-    [PROCESS_TABLE + currentPID*16 + 5] = -1;
 
     multipush(R1,R2,R3,R4);
     call SCHEDULER;

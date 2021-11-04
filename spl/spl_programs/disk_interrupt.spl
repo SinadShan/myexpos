@@ -3,7 +3,7 @@
 breakpoint;
 
 // number of disk access
-[72*512 + 1] = [72*512 + 1] + 1;
+// [72*512 + 1] = [72*512 + 1] + 1;
 
 // switch to the kernel stack and back up register context
 [PROCESS_TABLE + ( [SYSTEM_STATUS_TABLE + 1] * 16) + 13] = SP;

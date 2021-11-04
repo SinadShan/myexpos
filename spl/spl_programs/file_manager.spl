@@ -1,0 +1,187 @@
+// Mod3 File Manager
+
+alias functionNum R1;
+
+// Buffered Read
+if (functionNum == 2) then
+    alias  diskBlockNum R2;
+    alias offset R3;
+    alias word_address R4;
+
+    alias bufferNum R5;
+    bufferNum = diskBlockNum % 4;
+
+    //Acquire Buffer
+    multipush(R1,R2,R3,R4,R5);
+    R1 = 1;
+    R2 = bufferNum;
+    R3 = [SYSTEM_STATUS_TABLE  +1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4,R5);
+
+    if ( [ BUFFER_TABLE + bufferNum*4 + 0 ] != diskBlockNum) then
+        if ( [ BUFFER_TABLE + bufferNum*4 + 1 ] == 1 ) then
+
+            // Disk Store
+            multipush(R1,R2,R3,R4,R5);
+            R1 = 1;
+            R2 = [SYSTEM_STATUS_TABLE + 1];
+            R3 = 71 + bufferNum;
+            R4 = [BUFFER_TABLE + bufferNum*4 + 0] ;
+            call DEVICE_MANAGER;
+            multipop(R1,R2,R3,R4,R5);
+
+            [ BUFFER_TABLE + bufferNum*4 + 1 ] = 0;
+
+        endif;
+
+        // Disk Load
+        multipush(R1,R2,R3,R4,R5);
+        R1 = 2;
+        R4 = diskBlockNum ;
+        R2 = [SYSTEM_STATUS_TABLE + 1];
+        R3 = 71 + bufferNum;
+        call DEVICE_MANAGER;
+        multipop(R1,R2,R3,R4,R5);
+
+        [ BUFFER_TABLE + bufferNum*4 + 0 ] = diskBlockNum;
+
+    endif;
+    [[PTBR + 2 * (word_address/ 512)] * 512 + (word_address % 512)] = [ (71 + bufferNum)*512 + offset ];
+    breakpoint;
+
+    // Release Buffer
+    multipush(R1,R2,R3,R4,R5);
+    R1 = 2;
+    R2 = bufferNum;
+    R3 = [SYSTEM_STATUS_TABLE  +1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4,R5);
+
+    return;
+    
+endif;
+
+// Open
+if (functionNum == 3) then
+    alias fileName R2;
+    alias i R3;
+    i = 0;
+
+    // find INODE INDEX
+    while (i < MAX_FILE_NUM) do
+        if ([INODE_TABLE + i*16 + 1] == fileName) then
+            break;
+        endif;
+        i = i+1;
+    endwhile;
+    
+    if (i==MAX_FILE_NUM) then
+        R0 = -1;
+        return;
+    endif;
+
+    // Acquire Inode
+    multipush(R1,R2,R3);
+    R1 = 4;
+    R2 = i;
+    R3 = [SYSTEM_STATUS_TABLE + 1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3);
+
+    if (R0 == -1) then
+        return;
+    endif;
+
+    if ([INODE_TABLE + i*16 + 0] == EXEC) then
+
+        // Release Inode
+        multipush(R1,R2,R3);
+        R1 = 5;
+        R2 = i;
+        R3 = [SYSTEM_STATUS_TABLE + 1];
+        call RESOURCE_MANAGER;
+        multipop(R1,R2,R3);
+
+        R0 = -1;
+        return;
+    endif;
+
+    // find free entry in OPEN_FILE_TABLE
+    alias k R4;
+    k = 0;
+    while (k<MAX_OPENFILE_NUM) do
+        if ([OPEN_FILE_TABLE + k*4 + 0] == -1) then
+            break;
+        endif;
+        k = k+1;
+    endwhile;
+
+    if (k==MAX_OPENFILE_NUM) then
+        // Release Inode
+        multipush(R1,R2,R3,R4);
+        R1 = 5;
+        R2 = i;
+        R3 = [SYSTEM_STATUS_TABLE + 1];
+        call RESOURCE_MANAGER;
+        multipop(R1,R2,R3,R4);
+
+        R0 = -2;
+        return;
+    endif;
+
+    if (fileName == "root") then
+        [OPEN_FILE_TABLE + k*4 + 0] = INODE_ROOT;
+    else
+        if ([ FILE_STATUS_TABLE + i*4 + 1] == -1) then
+            [ FILE_STATUS_TABLE + i*4 + 1] = 1;
+        else
+            [ FILE_STATUS_TABLE + i*4 + 1] = [ FILE_STATUS_TABLE + i*4 + 1] + 1;
+        endif;
+
+        [OPEN_FILE_TABLE + k*4 + 0] = i;
+    endif;
+
+    [OPEN_FILE_TABLE + k*4 + 1] = 1;
+    [OPEN_FILE_TABLE + k*4 + 2] = 0;
+
+    // Release Inode
+    multipush(R1,R2,R3,R4);
+    R1 = 5;
+    R2 = i;
+    R3 = [SYSTEM_STATUS_TABLE + 1];
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4);
+
+    R0 = k;
+    return;
+
+endif;
+
+// Close
+if (functionNum == 4) then
+    alias openFileTableIndex R2;
+    alias inodeIndex R3;
+
+    inodeIndex = [OPEN_FILE_TABLE + openFileTableIndex*4 + 0];
+
+    // decrement open instance count
+    [OPEN_FILE_TABLE + openFileTableIndex*4 + 1] = [OPEN_FILE_TABLE + openFileTableIndex*4 + 1] - 1;
+
+    if ( [OPEN_FILE_TABLE + openFileTableIndex*4 + 1] == 0) then
+
+        [OPEN_FILE_TABLE + openFileTableIndex*4 + 0] = -1; 
+        [OPEN_FILE_TABLE + openFileTableIndex*4 + 1] = -1; 
+        [OPEN_FILE_TABLE + openFileTableIndex*4 + 2] = -1; 
+
+        if (inodeIndex != 0) then
+            [FILE_STATUS_TABLE + inodeIndex*4 + 1] = [FILE_STATUS_TABLE + inodeIndex*4 + 1] - 1;
+        endif;
+
+        if ([FILE_STATUS_TABLE + inodeIndex*4 + 1] == 0) then
+            [FILE_STATUS_TABLE + inodeIndex*4 + 1] = -1;
+        endif;
+    endif;
+
+    return;
+endif;

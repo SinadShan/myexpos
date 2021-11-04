@@ -1,5 +1,5 @@
 // number of switches to kernel module
-[72*512 + 3] = [72*512 + 3] + 1;
+// [75*512 + 3] = [75*512 + 3] + 1;
 
 // store user stack pointer
 alias userSP R0;
@@ -29,7 +29,7 @@ while( i<60 ) do
     i = i+1;
 endwhile ;
 
-if( i==60 ) then
+if( i==60 || [ INODE_TABLE + i*16 + 0] != EXEC) then
     [([PTBR + 2 * ((userSP - 1) / 512)] * 512) + ((userSP - 1) % 512)] = -1;
     [PROCESS_TABLE + currentPID*16 + 9] = 0;
     SP = userSP;

@@ -1,5 +1,5 @@
 // number of context switches
-[72*512 + 2] = [72*512 + 2] + 1;
+// [72*512 + 2] = [72*512 + 2] + 1;
 
 alias currentPID R0;
 currentPID = [SYSTEM_STATUS_TABLE + 1];

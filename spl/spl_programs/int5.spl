@@ -1,0 +1,101 @@
+// Open/Close System calls
+
+// extract sys call number from user stack
+alias userSP R1;
+alias sysCallNumber R2;
+alias currentPID R3;
+alias modeFlag R5;
+alias retVal R6;
+
+userSP = SP;
+sysCallNumber =[[PTBR + 2*(userSP - 5)/512]*512 + (userSP - 5)%512];
+R4 = [[PTBR + 2*(userSP - 4)/512]*512 + (userSP - 4)%512];
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+modeFlag = PROCESS_TABLE + currentPID*16+ 9 ;
+retVal = [PTBR + 2*(userSP - 1)/512]*512 + (userSP - 1)%512 ;
+
+// switch to kernel stack
+[PROCESS_TABLE + currentPID * 16 +13] = SP;
+SP = [PROCESS_TABLE + currentPID*16 +11]*512 -1;
+
+// Open File
+if (sysCallNumber == 2) then
+    // set mode flag 
+    [ modeFlag ] = 2;
+
+    alias fileName R4;
+
+    alias i R7;
+    i = 0;
+
+    // Obtain free resource table entry
+    while (i<8) do
+        if([[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + i*2] == -1) then
+            break;
+        endif;
+        i = i+1;
+    endwhile;
+
+    if (i == 8) then
+        [ modeFlag ] = 0;
+        [ retVal ] = -3;
+        SP = userSP;
+        ireturn;
+    endif;
+
+    // Call Open
+    multipush(R1,R2,R3,R4,R5,R6,R7);
+    R1 = 3;
+    R2 = fileName;
+    call FILE_MANAGER;
+    multipop(R1,R2,R3,R4,R5,R6,R7);
+
+    if ( R0 < 0 ) then
+        [ modeFlag ] = 0;
+        [ retVal ] = R0;
+        SP = userSP;
+        ireturn;
+    endif;
+
+    [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + i*2] = FILE;
+    [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + i*2 + 1] = R0;
+
+    [ modeFlag ] = 0;
+    [ retVal ] = i;
+    SP = userSP;
+    ireturn;
+endif;
+
+// Close File
+if (sysCallNumber == 3) then
+    // set mode flag 
+    [ modeFlag ] = 3;
+
+    alias fileDescriptor R4;
+
+    if (fileDescriptor<0 || fileDescriptor>7 || [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2] != FILE) then
+        [ modeFlag ] = 0;
+        [ retVal ] = -1;
+        SP = userSP;
+        ireturn;
+    endif;
+
+    alias openFileTableIndex R7;
+    openFileTableIndex = [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2 + 1] ;
+
+    // Call Close
+    multipush(R1,R2,R3,R4,R5,R6,R7);
+    R1 = 4;
+    R2 = openFileTableIndex;
+    call FILE_MANAGER;
+    multipop(R1,R2,R3,R4,R5,R6,R7);
+
+    // invalidate per-process resource table entry
+    [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2 ] = -1;
+
+    [ modeFlag ] = 0;
+    [ retVal ] = 0;
+    SP = userSP;
+    ireturn;
+
+endif;

@@ -5,6 +5,8 @@ loadi(64,14);
 // disk free list from disk to memory
 loadi(61,2);
 
+loadi(62,5);
+
 // inode table from disk to memory
 loadi(59,3);
 loadi(60,4);
@@ -12,6 +14,10 @@ loadi(60,4);
 // int 4 module from disk to memory
 loadi(10,23);
 loadi(11,24);
+
+// int 5 module from disk to memory
+loadi(12,25);
+loadi(13,26);
 
 // int 8 (fork) module from disk to memory
 loadi(18,31);
@@ -68,6 +74,10 @@ loadi(43,56);
 // module 2 (MEMORY_MANAGER) from disk to memory
 loadi(44,57);
 loadi(45,58);
+
+// module 3 (FILE_MANAGER) from disk to memory
+loadi(46,59);
+loadi(47,60);
 
 // module 4 (DEVICE_MANAGER) from disk to memory
 loadi(48,61);
@@ -178,6 +188,15 @@ while ( k < 4 ) do
     [ BUFFER_TABLE + k*4 + 1] = 0;
     [ BUFFER_TABLE + k*4 + 2] = -1;
     k = k + 1; 
+endwhile;
+
+// initialise open file table
+k = 0;
+while ( k<MAX_OPENFILE_NUM ) do
+    [ OPEN_FILE_TABLE + k*4 + 0 ] = -1;
+    [ OPEN_FILE_TABLE + k*4 + 1 ] = 0;
+    [ OPEN_FILE_TABLE + k*4 + 2 ] = 0;
+    k = k + 1;
 endwhile;
 
 [PROCESS_TABLE + 16 + 3] = 1;

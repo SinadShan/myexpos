@@ -5,6 +5,54 @@ alias currentPID R2;
 // print "resource_manager";
 // breakpoint;
 
+// Acquire Buffer
+if( functionNum == 1 ) then
+    alias bufferNum R2;
+    alias currentPID R3;
+
+    while ( [ BUFFER_TABLE + bufferNum*4  + 2] != -1 ) do
+        [ PROCESS_TABLE + currentPID*16 + 4] = WAIT_BUFFER;
+        [ PROCESS_TABLE + currentPID*16 + 5] = bufferNum;
+
+        multipush(R1,R2,R3);
+        call SCHEDULER;
+        multipop(R1,R2,R3);
+
+    endwhile;
+
+    [ BUFFER_TABLE + bufferNum*4 + 2] = currentPID;
+
+    return;
+
+endif;
+
+// Release Buffer
+if ( functionNum == 2 ) then
+    alias bufferNum R2;
+    alias currentPID R3;
+
+    if ( [ BUFFER_TABLE + bufferNum*4 + 2] != currentPID ) then
+        R0 = -1;
+        return;
+    endif;
+
+    [ BUFFER_TABLE + bufferNum*4 + 2] = -1;
+
+    alias i R4;
+    i = 0;
+    while (i<16) do
+        if ( [PROCESS_TABLE + i*16 + 4] == WAIT_BUFFER ) then
+            [PROCESS_TABLE + i*16 + 4] = READY;
+            [PROCESS_TABLE + i*16 + 5] = -1;
+        endif;
+        i = i+1;
+    endwhile;
+
+    R0 = 0;
+    return;
+endif;
+
+
 // Acquire Disk
 if( functionNum == 3 ) then
 
