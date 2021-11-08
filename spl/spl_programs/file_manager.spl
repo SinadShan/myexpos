@@ -2,8 +2,8 @@
 
 alias functionNum R1;
 
-// Buffered Read
-if (functionNum == 2) then
+// Buffered Read/Write
+if (functionNum == 1 || functionNum == 2) then
     alias  diskBlockNum R2;
     alias offset R3;
     alias word_address R4;
@@ -47,8 +47,13 @@ if (functionNum == 2) then
         [ BUFFER_TABLE + bufferNum*4 + 0 ] = diskBlockNum;
 
     endif;
-    [[PTBR + 2 * (word_address/ 512)] * 512 + (word_address % 512)] = [ (71 + bufferNum)*512 + offset ];
-    breakpoint;
+
+    if (functionNum == 2) then
+        [[PTBR + 2 * (word_address/ 512)] * 512 + (word_address % 512)] = [ (71 + bufferNum)*512 + offset ];
+    else
+        [ (71 + bufferNum)*512 + offset ] =  word_address;
+        [ BUFFER_TABLE + bufferNum*4 + 1 ] = 1;
+    endif;
 
     // Release Buffer
     multipush(R1,R2,R3,R4,R5);

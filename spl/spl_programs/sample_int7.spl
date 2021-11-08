@@ -1,52 +1,161 @@
+// Write Interrupt
+
 // number of switches to kernel module
 // [72*512 + 3] = [72*512 + 3] + 1;
 
-// seting mode flag to system call number
-[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 + 9] = 5;
+alias currentPID R9;
+currentPID = [SYSTEM_STATUS_TABLE + 1];
+[ PROCESS_TABLE + 16*currentPID + 9] = 7;
 
-alias userSP R0;
+alias userSP R1;
 userSP = SP;
 
-[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1] * 16 +13] = userSP;
-SP = [PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 +11]*512 -1;
+alias word_address R7;
+word_address = [([PTBR + 2 * ((userSP - 3) / 512)] * 512) + ((userSP - 3) % 512)];
+
+alias retVal R10;
+retVal = [PTBR + 2 * ((userSP - 1) / 512)] * 512 + (userSP - 1) % 512;
+
+[PROCESS_TABLE + currentPID * 16 +13] = userSP;
+SP = [PROCESS_TABLE + currentPID*16 +11]*512 -1;
 
 
-alias physicalPageNum R1;
-alias offset R2;
+alias fileDescriptor R2;
 alias fileDescPhysicalAddr R3;
-physicalPageNum = [PTBR + 2 * ((userSP - 4)/ 512)];
-offset = (userSP - 4) % 512;
-fileDescPhysicalAddr = (physicalPageNum * 512) + offset;
-alias fileDescriptor R4;
-fileDescriptor=[fileDescPhysicalAddr];
+fileDescPhysicalAddr = [(PTBR + 2*((userSP - 4)/512))]*512 + (userSP - 4)%512;
+fileDescriptor = [fileDescPhysicalAddr];
 
-if (fileDescriptor != -2)
-then
-    //code when argument 1 is not valid
-	alias physicalAddrRetVal R5;
-    physicalAddrRetVal = ([PTBR + 2 * ((userSP - 1) / 512)] * 512) + ((userSP - 1) % 512);
-    [physicalAddrRetVal] = -1; 
+if (fileDescriptor != -2) then
+    if( fileDescriptor > 7 || fileDescriptor <0) then
+
+        // Invalid file descriptor
+        [[PTBR + 2 * ((userSP - 1) / 512)] * 512 + (userSP - 1) % 512] = -1;
+
+    else
+        if ( [[PROCESS_TABLE + currentPID*16 + 11]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2] != 0) then
+            [retVal] = -1;
+            goto end;
+        endif;
+
+        alias openFileIndex R4;
+        alias inodeIndex R5;
+        openFileIndex = [[PROCESS_TABLE + currentPID*16 + 11]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2 + 1];
+        inodeIndex = [OPEN_FILE_TABLE + openFileIndex*4 + 0];
+
+        // Check for permission
+        if ([PROCESS_TABLE + currentPID*16 + 3] != ROOT && [INODE_TABLE + inodeIndex*16 + 3]!= currentPID && [INODE_TABLE + inodeIndex*16 + 4]==0 ) then
+            [retVal] = -3;
+            goto end;
+        endif;
+        // Acquire Inode
+        multipush(R9,R10,R1,R2,R3,R4,R5,R7);
+        R1 = 4;
+        R2 = inodeIndex;
+        R3 = currentPID; 
+        call RESOURCE_MANAGER;
+        multipop(R9,R10,R1,R2,R3,R4,R5,R7);
+
+        if (R0 == -1) then
+            // Acquire Inode failed
+            [retVal] = -1;
+			goto end;
+        endif;
+
+        alias lseek R6;
+        lseek = [OPEN_FILE_TABLE + openFileIndex*4 + 2];
+
+        if (lseek == MAX_FILE_SIZE) then
+            
+            // Release Inode
+            multipush(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+            R1 = 5;
+            R2 = inodeIndex;
+            R3 = currentPID; 
+            call RESOURCE_MANAGER;
+            multipop(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+
+
+            [retVal] = -2;
+			goto end;
+
+        endif;
+
+        if ( lseek%512 ==0 && lseek == [INODE_TABLE + inodeIndex*16 + 2]) then
+
+            // get free block
+            multipush(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+            R1 = 3;
+            call MEMORY_MANAGER;
+            multipop(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+
+            if (R0 == -1) then
+                // Release Inode
+                multipush(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+                R1 = 5;
+                R2 = inodeIndex;
+                R3 = currentPID;
+                call RESOURCE_MANAGER;
+                multipop(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+
+                [retVal] = -2;
+                goto end;
+            endif;
+
+            [ INODE_TABLE + inodeIndex*16 + 8 + (lseek/512)] = R0;
+            
+        endif;
+ 
+        // Buffered Write
+        multipush(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+        R1 = 1;
+        R2 = [INODE_TABLE + inodeIndex*16 + 8 + lseek/512];
+        R3 = lseek%512;
+        R4 = word_address;
+        call FILE_MANAGER;
+        multipop(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+
+        // increment file size if lseek is filesize
+        if (lseek == [INODE_TABLE + inodeIndex*16 + 2]) then
+            [INODE_TABLE + inodeIndex*16 + 2] = [INODE_TABLE + inodeIndex*16 + 2] + 1;
+
+            [ ROOT_FILE + inodeIndex*8 + 1] = [ ROOT_FILE + inodeIndex*8 + 1] + 1;
+        endif;
+
+        // increment lseek
+        [OPEN_FILE_TABLE + openFileIndex*4 + 2] = lseek + 1;
+
+        // Release Inode
+        multipush(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+        R1 = 5;
+        R2 = inodeIndex;
+        R3 = currentPID;
+        call RESOURCE_MANAGER;
+        multipop(R9,R10,R1,R2,R3,R4,R5,R6,R7);
+
+        [retVal] = 0;
+
+    endif;
+
 else
-    //code when argument 1 is valid
+    // print to terminal
 	alias word R5;
     word = [[PTBR + 2 * ((userSP - 3) / 512)] * 512 + ((userSP - 3) % 512)];
 
-    multipush(R0,R1,R2,R3,R4);
+    multipush(R9,R10,R1,R2,R3,R5,R7);
     R1 = 3;
-    R2 = [SYSTEM_STATUS_TABLE + 1];
+    R2 = currentPID;
     R3 = word;
     call DEVICE_MANAGER;
-    multipop(R0,R1,R2,R3,R4);
+    multipop(R9,R10,R1,R2,R3,R5,R7);
 
     // print word;
 
     // set return value as 0
-    alias physicalAddrRetVal R6;
-    physicalAddrRetVal = ([PTBR + 2 * (userSP - 1)/ 512] * 512) + ((userSP - 1) % 512);
-    [physicalAddrRetVal] = 0;
+    [retVal] = 0;
 endif;
 
+end:
 SP = userSP;
-[PROCESS_TABLE + [SYSTEM_STATUS_TABLE + 1]*16 + 9] = 0;
+[PROCESS_TABLE + currentPID*16 + 9] = 0;
 
 ireturn;

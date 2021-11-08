@@ -1,0 +1,39 @@
+int main()
+{
+    decl
+        int temp,temp2,fileDescriptor,num;
+    enddecl
+
+    begin
+        fileDescriptor = exposcall("Open","nums.dat");
+
+        if(fileDescriptor==-1) then
+            temp = exposcall("Exit");
+        endif;
+
+        temp = exposcall("Write",-2,"Appending....");            
+
+        temp = exposcall("Seek",fileDescriptor,2048);
+        num = 2000;
+        while ( num <= 2513 ) do
+            temp = exposcall("Write",fileDescriptor,num);            
+            num = num + 1;
+        endwhile;
+
+        temp = exposcall("Seek",fileDescriptor,-1);
+        temp = 0;
+        while ( num>1 ) do
+            temp = exposcall("Read",fileDescriptor,num);
+
+            if (temp == -2) then
+                break;
+            endif;
+
+            temp2 = exposcall("Write",-2,num);
+            temp = exposcall("Seek",fileDescriptor,-2);
+        endwhile;
+
+        temp = exposcall("Close","nums.dat");
+        return 0;
+    end
+}

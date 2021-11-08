@@ -1,4 +1,4 @@
-// Open/Close System calls
+// Open/Close/Seek System calls
 
 // extract sys call number from user stack
 alias userSP R1;
@@ -51,6 +51,7 @@ if (sysCallNumber == 2) then
     multipop(R1,R2,R3,R4,R5,R6,R7);
 
     if ( R0 < 0 ) then
+        print("Invalid file");
         [ modeFlag ] = 0;
         [ retVal ] = R0;
         SP = userSP;
@@ -98,4 +99,93 @@ if (sysCallNumber == 3) then
     SP = userSP;
     ireturn;
 
+endif;
+
+// Seek systemcall
+if ( sysCallNumber == 6 ) then
+    // set mode flag 
+    [ modeFlag ] = 6;
+
+    alias fileDescriptor R4;
+
+    if (fileDescriptor<0 || fileDescriptor>7 || [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2] != FILE) then
+        [ modeFlag ] = 0;
+        [ retVal ] = -1;
+        SP = userSP;
+        ireturn;
+    endif;
+
+    alias openFileIndex R7;
+    openFileIndex = [[ PROCESS_TABLE + currentPID*16 +11 ]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2 + 1] ;
+    
+    alias inodeIndex R8;
+    inodeIndex = [OPEN_FILE_TABLE + openFileIndex*4 + 0];
+
+    // Acquire Inode
+    multipush(R1,R2,R3,R4,R5,R6,R7,R8);
+    R1 = 4;
+    R2 = inodeIndex;
+    R3 = currentPID; 
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4,R5,R6,R7,R8);
+
+    if (R0 == -1) then
+        // Acquire Inode failed
+        [retVal] = -1;
+        [modeFlag] = 0;
+        SP = userSP;
+        ireturn;    
+    endif;
+
+    alias lseek R9;
+    lseek = [OPEN_FILE_TABLE + openFileIndex*4 + 2];
+
+    alias offset R10;
+    offset = [[PTBR + 2*(userSP - 3)/512]*512 + (userSP - 3)%512];
+
+    if ( lseek + offset < 0) then
+        // Release Inode
+        multipush(R1,R2,R3,R4,R5,R6,R7,R8,R9,R10);
+        R1 = 5;
+        R2 = inodeIndex;
+        R3 = currentPID; 
+        call RESOURCE_MANAGER;
+        multipop(R1,R2,R3,R4,R5,R6,R7,R8,R9,R10);
+
+        [retVal] = -2;
+        [modeFlag] = 0;
+        SP = userSP;
+        ireturn;
+    endif;
+
+    alias fileSize R11;
+    if ( inodeIndex == 0 ) then
+        fileSize = 480;
+    else
+        fileSize = [INODE_TABLE + inodeIndex*16 + 2];
+    endif;
+
+
+    if ( offset == 0 ) then
+        [ OPEN_FILE_TABLE + openFileIndex*4 + 2] = 0;
+    else
+        if ( lseek + offset > fileSize ) then
+            [ OPEN_FILE_TABLE + openFileIndex*4 + 2 ] = fileSize;
+        else
+            [ OPEN_FILE_TABLE + openFileIndex*4 + 2 ] = lseek + offset;
+        endif;
+    endif;
+
+    // Release Inode
+    multipush(R1,R2,R3,R4,R5,R6,R7,R8,R9,R11);
+    R1 = 5;
+    R2 = inodeIndex;
+    R3 = currentPID; 
+    call RESOURCE_MANAGER;
+    multipop(R1,R2,R3,R4,R5,R6,R7,R8,R9,R11);
+
+    [retVal] = 0;
+    [modeFlag] = 0;
+    SP = userSP;
+    ireturn;
 endif;

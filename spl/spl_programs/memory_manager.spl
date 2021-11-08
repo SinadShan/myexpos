@@ -57,6 +57,20 @@ if( functionNum == 2 ) then
     return;
 endif;
 
+// Get free block
+if ( functionNum == 3 ) then
+    alias i R2;
+    i = DISK_FREE_AREA;
+    while ( i < DISK_SWAP_AREA ) do
+        if ( [ DISK_FREE_LIST + i] == 0 ) then
+            [ DISK_FREE_LIST + i] = 1;
+            R0 = i;
+            return;
+        endif;
+        i = i+1;
+    endwhile;
+endif;
+
 // Get Code Page
 if( functionNum == 5 ) then
     alias i R3;

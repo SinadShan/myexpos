@@ -47,6 +47,7 @@ else
     else
 		// invalid fileDescriptor
         if ( [[PROCESS_TABLE + currentPID*16 + 11]*512 + RESOURCE_TABLE_OFFSET + fileDescriptor*2] != 0) then
+            print("Bad file format");
             alias physicalAddrRetVal R4;
             physicalAddrRetVal = ([PTBR + 2 * ((userSP - 1) / 512)] * 512) + ((userSP - 1) % 512);
             [physicalAddrRetVal] = -1;

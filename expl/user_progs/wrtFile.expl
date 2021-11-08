@@ -1,0 +1,37 @@
+int main()
+{
+    decl
+        int temp,temp2,fileDescriptor,permission,data;
+        string fileName;
+    enddecl
+
+    begin
+        temp = exposcall("Read",-1,fileName);
+        temp = exposcall("Read",-1,permission);
+
+        temp = exposcall("Create",fileName,permission);
+        fileDescriptor = exposcall("Open",fileName);
+        
+        temp = exposcall("Write",-2,"Writing numbers");
+        temp2 = 1;
+        while (temp2<=1100) do
+            temp = exposcall("Write",fileDescriptor,temp2);
+            temp2 = temp2 + 1;
+        endwhile;
+
+        temp = exposcall("Seek",fileDescriptor,-1);
+        temp = 0;
+        while ( data>1 ) do
+            temp = exposcall("Read",fileDescriptor,data);
+
+            if (temp == -2) then
+                break;
+            endif;
+            temp2 = exposcall("Write",-2,data);
+            temp = exposcall("Seek",fileDescriptor,-2);
+        endwhile;
+
+        temp = exposcall("Close",fileName);
+        return 0;
+    end
+}

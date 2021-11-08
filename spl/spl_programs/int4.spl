@@ -115,7 +115,7 @@ if ( sysCallNumber == 4) then
     endif;
 
     if ( [ INODE_TABLE + i*16 + 4] == 1 ) then
-        if ( [PROCESS_TABLE + currentPID*16 + 3] != 0 && [INODE_TABLE + i*16 + 3] != currentPID) then
+        if ( [PROCESS_TABLE + currentPID*16 + 3] != 1 && [INODE_TABLE + i*16 + 3] != currentPID) then
             // store return value -1 
             print("Permission Denied");
             [retVal] = -1;
